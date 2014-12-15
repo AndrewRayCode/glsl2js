@@ -138,6 +138,7 @@ function AstTypeSpecifier(specifier) {
 	this.array_size = null;	
 	this.precision = 2;
 	this.is_precision_statement = null;
+	this.original_specifier = specifier;
 
 	if (AstTypeSpecifier[typeof specifier]) {
 		AstTypeSpecifier[typeof specifier].call(this, specifier);

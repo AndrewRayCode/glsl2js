@@ -36,10 +36,6 @@ proto = GlslExtensions.prototype = {};
  */
 proto.enable = function(name) {
 
-	if (!(name in glsl.extensions)) {
-		return false;	
-	}
-
 	if (this.enabled.indexOf(name) === -1) {
 		this.enabled.push(name);
 	}

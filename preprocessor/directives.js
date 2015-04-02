@@ -39,6 +39,8 @@ Preprocessor.modules.directives = {
 		this.state.cond_stack = [];
 		this.state.compile_state = state;
 
+		state.directives = this.state;
+
 		i = 0;
 		l = this.state.lines.length;
 

@@ -53,10 +53,6 @@ proto.enable = function(name) {
 proto.disable = function(name) {
 	var i;
 
-	if (!(name in glsl.extensions)) {
-		return false;	
-	}
-
 	i = this.enabled.indexOf(name);
 
 	if (i !== -1) {

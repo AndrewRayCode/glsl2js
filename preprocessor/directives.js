@@ -156,11 +156,6 @@ Preprocessor.modules.directives = {
 
 			case 'enable':
 
-				if (ext_warn) {
-					this.state.compile_state.addWarning(ext_warn);
-					return;
-				}
-
 				extensions.enable(ext_name);
 
 				break;

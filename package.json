@@ -7,16 +7,19 @@
   "main": "buil/glsl.web.js",
   "dependencies": {},
   "devDependencies": {
+    "chai": "^1.10.0",
     "del": "^0.1.1",
     "gulp": "^3.8.6",
     "gulp-browserify": "^0.5.0",
     "gulp-concat": "^2.3.4",
     "gulp-include": "^1.0.1",
     "gulp-jison": "^1.0.0",
+    "gulp-jison-lex": "^1.1.0",
     "gulp-jshint": "^1.7.1",
     "gulp-rename": "^1.2.0",
     "gulp-sourcemaps": "^1.1.5",
     "gulp-uglify": "^0.3.2",
-    "gulp-watch": "^1.1.0"
+    "gulp-watch": "^1.1.0",
+    "mocha": "^2.0.1"
   }
 }

@@ -25,12 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * Represents a single assembly-like instruction
  */
-function IrInstruction(op, d, s1, s2, s3, gen) {
+function IrInstruction(op, d, s1, s2, s3) {
 	var args;
-
-	if (gen) {
-		d = IRS.getTemp();
-	}
 
 	this.str = null;
 	this.line = null;
@@ -54,8 +50,24 @@ function IrInstruction(op, d, s1, s2, s3, gen) {
 IrInstruction.operands = ['d', 's1', 's2', 's3'];
 
 
+/**
+ * Create operand for instruction
+ *
+ * @param   mixed   opr   String or IrOperand
+ *
+ * @return  mixed
+ */
 IrInstruction.prototype.operand = function(opr) {
-	return opr ? new IrOperand(opr) : "";
+
+	if (!opr) {
+		return "";	
+	}
+
+	if (opr instanceof IrOperand) {
+		return opr;	
+	}
+
+	return new IrOperand(opr);
 };
 
 /**
@@ -121,9 +133,9 @@ IrComment.prototype.toString = function() {
 	var c = this.comment;
 
 	if (this.loc) {
-		c = util.format("[%s:%s-%s:%s] %s", this.loc.first_line, this.loc.first_column, this.loc.last_line, this.loc.last_column, c);
+		c = util.format("%s [%s:%s-%s:%s]", c, this.loc.first_line, this.loc.first_column, this.loc.last_line, this.loc.last_column);
 	}
-	c = '# ' + c;
+	c = "\n# " + c;
 
 	return c;
 };
@@ -143,6 +155,7 @@ function IrOperand(str, raw) {
 	this.swizzle = "";
 	this.number = "";
 	this.raw = "";
+	this.index = "";
 
 	if (raw) {
 		this.full = str;
@@ -164,14 +177,22 @@ IrOperand.prototype.parse = function(str) {
 		return;
 	}
 
+	if (!isNaN(parseFloat(str))) {
+		this.raw = str;
+		return;
+	}
+
 	//neg
 	regex = "(\-)?";
 
 	//name (include '%' for our code substitution rules)
 	regex += "([\\w%]+)";
 
-	//address
+	//number
 	regex += "(?:@(\\d+))?";
+
+	//index
+	regex += "(?:\\[(\\d+)\\])?";
 
 	//swizzle
 	regex += "(?:\\.([xyzw]+))?";
@@ -183,7 +204,8 @@ IrOperand.prototype.parse = function(str) {
 		this.neg = parts[1] || "";
 		this.name = parts[2];
 		this.address = parseInt(parts[3]) || 0;
-		this.swizzle = parts[4] || "";
+		this.index = parseInt(parts[4]) || 0;
+		this.swizzle = parts[5] || "";
 	} else {
 		if (parts = str.match(/^"(.*)"$/)) {
 			this.raw = parts[1];
@@ -208,6 +230,18 @@ IrOperand.prototype.addOffset = function(offset) {
 };
 
 /**
+ * Set components size if not already set
+ */
+IrOperand.prototype.makeSize = function(size) {
+
+	if (!this.swizzle) {
+		this.swizzle = "xyzw".substring(0, size);
+	} else if (this.swizzle.length != size) {
+		throw new Error(util.format("Cannot coerce operand to size %s", size));
+	}
+};
+
+/**
  * toString method
  *
  * @return  string
@@ -218,7 +252,7 @@ IrOperand.prototype.toString = function() {
 	if (this.raw) {
 		str = this.raw;	
 	} else {
-		str = this.neg + this.name + ("@" + this.address) + (this.swizzle ? "." + this.swizzle : "");
+		str = this.neg + this.name + ("@" + this.address) + (this.index !== "" ? "[" + this.index + "]" : "") + (this.swizzle ? "." + this.swizzle : "");
 	}
 	
 	return str;

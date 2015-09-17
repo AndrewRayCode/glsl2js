@@ -21,53 +21,64 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 /**
- * GlslProgramJavascript class
+ * GlslProgramJS class
  */
-function GlslProgramJavascript() {
+function GlslProgramJS() {
+	GlslProgram.apply(this, arguments);
 
-	this.vertex_code = [];
-	this.fragment_code = [];
-
-	this.symbols = new GlslProgramJavascriptVars();
-	this.context = new GlslProgramJavascriptContext();
-
-	this.library = {
-		tex : function() {
-			return [0, 0, 0, 0];	
-		}
-	};
-
-	this.vertex = null;
-	this.shader = null;
+	this.context = new GlslProgramJSContext(this.options);
 }
 
-var proto = GlslProgramJavascript.prototype;
+util.inherits(GlslProgramJS, GlslProgram);
+glsl.program.js = GlslProgramJS;
 
-GlslProgramJavascript.translation_table = {
-	'ABS' : '%1.* = Math.abs(%2.*)',
-	'ADD' : '%1.* = (%2.*) + (%3.*)',
+var proto = GlslProgramJS.prototype;
+
+GlslProgramJS.translation_table = {
+	'ABS'  : '%1.* = Math.abs(%2.*);',
+	'ADD'  : '%1.* = %2.* + %3.*;',
+	'AND'  : '%1.* = %2.* & %3.*;',
+	'BRK'  : 'break;',
 	//'ARL' : false,
-	'CMP' : '%1.* = ((%2.* < 0.0) ? (%3.*) : (%4.*))',
-	//'COS' : 'Math.cos(%2)',
-	'DP3' : '%1.x = ((%2.x) * (%3.x) + (%2.y) * (%3.y) + (%2.z) * (%3.z))',
-	'DP4' : '%1.x = ((%2.x) * (%3.x) + (%2.y) * (%3.y) + (%2.z) * (%3.z) + (%2.w) * (%3.w))',
-	//'DPH' : '%1.* = (%2.x * %3.x + %2.y * %3.y + %2.z + %3.z + %3.w)',
-	//'DST' : '%1.* = [1, %2.y * %3.y, %2.z, %3.w]',
-	'ELSE'  : '} else {',
-	'ENDIF' : '}', 
-	'IF'  : 'if (%1.x) {',
-	'MAD' : '%1.* = (%2.* * %3.*) + %4.*;',
-	'MAX' : '%1.* = Math.max((%2.*), (%3.*))',
-	'MOV' : '%1.* = %2.*;',
-	'MUL' : '%1.* = %2.* * %3.*;',
-	'POW' : '%1.x = Math.pow(%2.x, %3.x)',
-	'RET' : 'return',
-	'RSQ' : '%1.* = (1.0 / Math.sqrt(%2.*))',
-	'SEQ' : '%1.* = (%2.* === %3.*) ? 1.0 : 0.0',
-	'SGE' : '%1.* = (%2.* >= %3.*) ? (1.0) : (0.0)',
-	'SLT' : '%1.* = (%2.* <  %3.*) ? (1.0) : (0.0)',
-	'SUB' : '%1.* = (%2.*) - (%3.*)',
-	'TEX' : '%1.* = tex(%3, %2.x, %2.y, 0)'
+	'CEIL' : '%1.* = Math.ceil(%2.*);',
+	'CMP'  : '%1.* = (%2.* < 0.0) ? %3.* : %4.*;',
+	'COS'  : '%1.* = Math.cos(%2.*);',
+	'DIV'  : '%1.* = %2.* / %3.*;',
+	'DP2'  : '%1.x = (%2.x * %3.x) + (%2.y * %3.y);',
+	'DP3'  : '%1.x = (%2.x * %3.x) + (%2.y * %3.y) + (%2.z * %3.z);',
+	'DP4'  : '%1.x = (%2.x * %3.x) + (%2.y * %3.y) + (%2.z * %3.z) + (%2.w * %3.w);',
+	//'DPH' : '%1.* = (%2.x * %3.x + %2.y * %3.y + %2.z + %3.z + %3.w);',
+	//'DST' : '%1.* = [1, %2.y * %3.y, %2.z, %3.w];',
+	'ELSE' : '} else {',
+	'ENDIF': '}',
+	'ENDREP' : '}',
+	'EVAL' : '%1;',
+	'FLR'  : '%1.* = Math.floor(%2.*);',
+	'FRC'  : '%1.* = %2.* - Math.floor(%2.*);',
+	'IF'   : 'if (%1.*) {',
+	'IFN'  : 'if (!%1.*) {',
+	'MAD'  : '%1.* = (%2.* * %3.*) + %4.*;',
+	'MAX'  : '%1.* = Math.max(%2.*, %3.*);',
+	'MIN'  : '%1.* = Math.min(%2.*, %3.*);',
+	'MOD'  : '%1.* = %2.* % %3.*;',
+	'MOV'  : '%1.* = %2.*;',
+	'MUL'  : '%1.* = %2.* * %3.*;',
+	'OR'   : '%1.* = %2.* | %3.*;',
+	'POW'  : '%1.x = Math.pow(%2.x, %3.x);',
+	'REP'  : 'while (true) {',
+	'RET'  : 'return;',
+	'RSQ'  : '%1.* = (1.0 / Math.sqrt(%2.*));',
+	'SEQ'  : '%1.* = (%2.* === %3.*) ? 1.0 : 0.0;',
+	'SGE'  : '%1.* = (%2.* >=  %3.*) ? 1.0 : 0.0;',
+	'SGT'  : '%1.* = (%2.* >   %3.*) ? 1.0 : 0.0;',
+	'SIN'  : '%1.* = Math.sin(%2.*);',
+	'SLE'  : '%1.* = (%2.* <=  %3.*) ? 1.0 : 0.0;',
+	'SLT'  : '%1.* = (%2.* <   %3.*) ? 1.0 : 0.0;',
+	'SNE'  : '%1.* = (%2.* !== %3.*) ? 1.0 : 0.0;',
+	'SUB'  : '%1.* = %2.* - %3.*;',
+	'TAN'  : '%1.* = Math.tan(%2.*);', //Non-standard opcode for NV_gpu
+	'TEX'  : 'tex(%1, %4, %2, %5, %3.x, 0);', //%4 = address of %1, %5 = address of %2
+	'XOR'  : '%1.* = %2.* ^ %3.*;'
 }; 
 
 /**
@@ -89,93 +100,47 @@ proto.toString = function(target) {
 };
 
 /**
- * Translates IR code into a javascript representation
- *
- * @return  bool      true if there were no errors
- */
-proto.addObjectCode = function(object, target) {
-	var i, errors;
-
-	//optimize(irs, symbols);
-
-	this.mergeSymbols(object);
-
-	this.current = [];
-
-	for (i = 0; i < object.code.length; i++) {
-		try {
-			this.instruction(object.code[i]);
-		} catch (e) {
-			this.error = util.format("%s at %s:%s", e.message, e.lineNumber, e.columnNumber);
-			return false;
-		}
-	}
-
-	if (target == glsl.target.vertex) {
-		this.vertex_code = this.current;
-	} else if (target == glsl.target.fragment) {
-		this.fragment_code = this.current;
-	}
-
-	return true;
-};
-
-/**
- * Merge symbol code into program table
- */
-proto.mergeSymbols = function(object) {
-	var s, t, n, entry, start, size;
-	
-	for (s in object.symbols) {
-		
-		t = object.symbols[s].entries;	
-
-		for (n in t) {
-		
-			entry = t[n];
-			start = parseInt(entry.out.split('@')[1]);
-			size = types[entry.type].size;
-			
-			if (s == 'uniform') {
-				this.symbols.addUniform(entry.name, start, size);
-			} else if (s == 'attribute') {					
-				this.symbols.addAttribute(entry.name, start, size);
-			} else if (s == 'varying') {
-				this.symbols.addVarying(entry.name, start, size);				
-			}
-
-		}
-	}	
-};
-
-/**
  * Build a program
  *
  * @return  function
  */
 proto.build = function() {
+	var i, module, shaders, init, start, vars;
 
-	var module, shaders;
+	vars = {
+		uniform_f32   : Math.max(this.options.max_vertex_uniform_vectors, this.options.max_fragment_uniform_vectors),
+		attribute_f32 : this.options.max_vertex_attribute_vectors,
+		varying_f32   : this.options.max_varying_vectors,
+		result_f32    : 2,
+		temp_f32      : this.options.max_register_vectors,
+		jstemp_f32    : 1
+	}
 
-	module = new Function("stdlib", "foreign", "heap",
-		"\"use asm\";\n" +
-		"var\n" +
-		"uniform_f32   = new stdlib.Float32Array(heap,   0, 128),\n" +
-		"attribute_f32 = new stdlib.Float32Array(heap, 128, 128),\n" +
-		"varying_f32   = new stdlib.Float32Array(heap, 256, 128),\n" +
-		"result_f32    = new stdlib.Float32Array(heap, 384, 128),\n" +
-		"temp_f32      = new stdlib.Float32Array(heap, 512, 128),\n" +
-		"jstemp        = new stdlib.Float32Array(heap, 636,   4),\n" +
-		"tex           = foreign.tex;\n" +
-		";\n" +
-		"function vs() {\n" +
-			this.vertex_code.join("\n") + "\n" +
-		"}\n" +
-		"function fs() {\n" +
-			this.fragment_code.join("\n") + "\n" +
-		"}\n" +
-		"return { fragment : fs, vertex : vs };"
-	);
+	code = [];
+	//init.push("\"use asm\";");
+	code.push("var");
+
+	start = 0;
+	for (i in vars) {
+		count = vars[i];
+		code.push(util.format("%s = new stdlib.Float32Array(heap, %d, %d),", i, start, count * 4));
+		start += count * 16;
+	}
+
+	code.push("tex2D = foreign.tex2D,");
+	code.push("texCUBE = foreign.texCUBE;");
+
+	code.push("function vs() {");
+	code.push(this.vertex_code.join("\n"));
+	code.push("}");
+
+	code.push("function fs() {");
+	code.push(this.fragment_code.join("\n"));
+	code.push("}");
+	
+	code.push("return { fragment : fs, vertex : vs };");
+
+	module = new Function("stdlib", "foreign", "heap", code.join("\n"));
 
 	shaders = module(window, this.library, this.context.heap);
 
@@ -192,18 +157,27 @@ proto.instruction = function(ins) {
 	var tpl, dest, src, i, j, k, code, js;
 
 	if (ins instanceof IrComment) {
-		this.current.push('    // ' + ins.toString());
+		this.current.push("");
+		this.current.push('// ' + ins.toString().replace("\n", ""));
 		return;
 	}
 
 	this.current.push('// ' + ins.toString());
 
-	if (!(tpl = GlslProgramJavascript.translation_table[ins.op])) {
-		throw new Error("Could not translate opcode");
+	if (!(tpl = GlslProgramJS.translation_table[ins.op])) {
+		throw new Error(util.format("Could not translate opcode '%s'", ins.op));
+	}
+
+	if (ins.op == 'EVAL') {
+		tpl = tpl.replace(/%1/g, ins.d.full);
+		ins.d = ins.s1;
+		ins.s1 = ins.s2;
+		ins.s2 = ins.s3;
 	}
 
 	//variables
 	dest = this.buildComponents(ins.d, true);
+
 	if (!dest) {
 		this.current.push(tpl);
 		return;
@@ -213,6 +187,19 @@ proto.instruction = function(ins) {
 	src.push(this.buildComponents(ins.s1));
 	src.push(this.buildComponents(ins.s2));
 	src.push(this.buildComponents(ins.s3));
+
+	if (ins.op == 'TEX') {
+		js = tpl.replace(/tex/, 'tex' + src[2].name);
+		js = js.replace(/%1/g, dest.name);
+		js = js.replace(/%2/g, src[0].name);
+		js = this.replaceOperand(js, '%3', src[1], 0);
+		js = js.replace(/%4/g, dest.start);
+		js = js.replace(/%5/g, src[0].start);
+
+		this.current.push(js);
+		this.current.push("");
+		return;
+	}
 
 	this.generateTemp(dest, src, tpl);
 
@@ -254,8 +241,15 @@ proto.replaceOperand = function(tpl, from, op, n) {
 	if (op.raw) {
 		name = op.name;
 	} else {
-		name = op.jstemp[n] ? 'jstemp' : op.name;
-		addr = op.jstemp[n] ? n : op.start + op.components[n];
+		if (op.jstemp && op.jstemp[n]) {
+			name = 'jstemp_f32';
+			addr = n;
+		} else {
+			name = op.name;
+			if (op.components) {
+				addr = op.start + op.components[n];
+			}
+		}
 	}
 
 	if (op.components) {
@@ -265,7 +259,7 @@ proto.replaceOperand = function(tpl, from, op, n) {
 	}
 
 	for (i = 0; i < swz.length; i++) {
-		out = out.replace(new RegExp(from + '\.' + swz[i], 'g'), util.format("%s[%s]", name, op.start + i));
+		out = out.replace(new RegExp(from + '\.' + swz[i], 'g'), op.raw ? name : util.format("%s[%s]", name, op.start + i));
 	}
 
 	return out;
@@ -295,8 +289,8 @@ proto.buildComponents = function(opr, dest) {
 		return out;
 	}
 
-	out.name = opr.name + '_f32';
-	out.start = 4 * opr.address;
+	out.name = opr.neg + opr.name + '_f32';
+	out.start = 4 * opr.address + 4 * opr.index;
 	out.components = [];
 	out.jstemp = [];
 
@@ -335,45 +329,13 @@ proto.generateTemp = function(dest, src, tpl) {
 			op = src[c];
 			if (op && op.name == dest.name && op.start == dest.start && written.indexOf(op.components[i]) != -1) {
 				op.jstemp[i] = true;
-				this.current.push(util.format("jstemp[%s] = %s[%s]", i, op.name, op.start + op.components[i]));
+				this.current.push(util.format("jstemp_f32[%s] = %s[%s]", i, op.name, op.start + op.components[i]));
 			}
 		}
 	}
 	
 	//console.log(tpl, dest, src);
 	//debugger;
-};
-
-/**
- * Get Uniform Location
- *
- * @param   string   name   Name
- *
- * @return  int
- */
-proto.getUniformLocation = function(name) {
-
-	if (this.symbols.uniform[name]) {
-		return this.symbols.uniform[name].start;	
-	}
-
-	return false;
-};
-
-/**
- * Get Uniform Size
- *
- * @param   string   name   Name
- *
- * @return  int
- */
-proto.getUniformSize = function(name) {
-
-	if (this.symbols.uniform[name]) {
-		return this.symbols.uniform[name].size;	
-	}
-	
-	return false;
 };
 
 /**
@@ -394,38 +356,6 @@ proto.setUniformData = function(name, data) {
 	}
 	
 	this.context.uniform_f32.set(data, i + s);
-};
-
-/**
- * Get Attribute Location
- *
- * @param   string   name   Name
- *
- * @return  int
- */
-proto.getAttributeLocation = function(name) {
-
-	if (this.symbols.attribute[name]) {
-		return this.symbols.attribute[name].start;	
-	}
-	
-	return false;
-};
-
-/**
- * Get Attribute Size
- *
- * @param   string   name   Name
- *
- * @return  int
- */
-proto.getAttributeSize = function(name) {
-
-	if (this.symbols.attribute[name]) {
-		return this.symbols.attribute[name].size;	
-	}
-	
-	return false;
 };
 
 /**
@@ -462,17 +392,6 @@ proto.getResultData = function(start, size) {
 	return res;
 };
 
-/**
- * Set TEX lookup function
- *
- * 
- */
-proto.setTexFunction = function(func) {
-	this.extern.tex = func;
-};
-
-
-glsl.program = GlslProgramJavascript;
 
 
 

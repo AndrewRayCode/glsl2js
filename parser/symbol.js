@@ -24,14 +24,33 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * SymbolTableEntry constructor
  */
 function SymbolTableEntry(name, typedef) {
-	this.name = name;
-	this.typedef = typedef;
-	this.type = null;
-	this.definition = null;
+
 	this.depth = null;
+	this.typedef = typedef;
+
+	//Variable name
+	this.name = name;
+
+	//Type
+	this.type = null;
+
+	//Base type (if array)
+	this.base_type = null;
+
+	//Function definition
+	this.definition = [];	
+
+	//Qualifier
 	this.qualifier = null;
+
+	//IR name
 	this.out = name;
+	
+	//Constant value
 	this.constant = null;
+	
+	//Array size
+	this.size = null;
 
 	//Temp vars for IR generation
 	this.code = null;
@@ -42,6 +61,10 @@ SymbolTableEntry.typedef = {
 	variable : 0,
 	func : 1,
 	type : 2
+};
+
+SymbolTableEntry.prototype.getType = function() {
+	return types[this.type];
 };
 
 
@@ -123,14 +146,7 @@ proto.add_type = function(name, t) {
  * 
  */
 proto.add_function = function(name, type, def) {
-
 	var entry;
-
-	//don't readd the exact same function definition
-	entry = this.get_function(name, def);
-	if (entry) {
-		return entry;
-	}
 
 	entry = new SymbolTableEntry(name, SymbolTableEntry.typedef.func);
 	entry.type = type;
@@ -219,14 +235,76 @@ proto.get_entry = function(name, typedef, def) {
 	var t, i, entry;
 	
 	t = this.table[name] || [];
+	
+	//Look for 'void' instead of empty definition list
+	if (def && def.length == 0) {
+		def = ["void"];	
+	}
+
 	for (i = 0; i < t.length; i++) {
+		
 		entry = t[i];
-		if (entry.typedef === typedef /*&& (typedef !== SymbolTableEntry.typedef.func || this._match_definition(def, entry.definition))*/) {
+		
+		//Not type of variable we're looking for
+		if (entry.typedef !== typedef) {
+			continue;	
+		}
+		
+		//Normal variable
+		if (typedef !== SymbolTableEntry.typedef.func) {
 			return entry;
 		}
+
+		//Match any function definition
+		if (!def) {
+			return entry;
+		}
+		
+		//Match specific function definition
+		if (def.join(',') === entry.definition.join(',')) {
+			return entry;
+		}
+
 	}
 	
 	return null;
 };
+
+
+
+
+/**
+ * SymbolTableEntry constructor
+ */
+function SymboltableTypeDefinition(type, arg_types) {	
+	this.type = type;
+	this.arg_types = arg_types;
+}
+
+proto = SymboltableTypeDefinition.prototype;
+
+/**
+ * Match argument list types
+ *
+ * @param   array   args   List of argument types
+ *
+ * @return  bool
+ */
+proto.matchArguments = function(args) {
+	var i;
+	
+	for (i = 0; i < args.length; i++) {
+		if (!this.arg_types[i] || this.arg_types[i] != args[i]) {
+			return false;	
+		}
+	}
+
+	return true;
+};
+
+proto.toString = function() {
+	return this.arg_types.join(",") + ":" + this.type;
+};
+
 
 

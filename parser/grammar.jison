@@ -19,282 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-%{
-%}
-
-/* lexical grammar */
-%lex
-
-DEC_INT		[1-9][0-9]*
-HEX_INT		0[xX][0-9a-fA-F]+
-OCT_INT		0[0-7]*
-INT		({DEC_INT}|{HEX_INT}|{OCT_INT})
-SPC		[ \t]*
-SPCP		[ \t]+
-HASH		^{SPC}#{SPC}
-
-%s PRAGMA PP
-
-%%
-
-[ \r\t]+		;
-
-/* Preprocessor tokens. */ 
-[ \t]*\#[ \t]*$             {}
-[ \t]*\#[ \t]*"version"     { this.begin('PP'); return 'VERSION'; }
-[ \t]*\#[ \t]*"extension"   { this.begin('PP'); return 'EXTENSION'; }
-
-{HASH}"line"{SPCP}{INT}{SPCP}{INT}{SPC}$ {
-	
-	/* Eat characters until the first digit is
-	 * encountered
-	 */
-	
-	var ptr = 0;
-	while (yytext.slice(0, 1) < '0' || yytext.slice(0, 1) > '9') {
-		ptr++;
-	}
-
-	/* Subtract one from the line number because
-	 * yylineno is zero-based instead of
-	 * one-based.
-	 */
-	yylineno = parseInt(yytext.slice(0, 1), 10) - 1;
-	yylloc.source = parseInt(yytext.slice(0), 10);
-}
-
-{HASH}"line"{SPCP}{INT}{SPC}$	{
-				   /* Eat characters until the first digit is
-				    * encountered
-				    */
-					var ptr = 0;
-					while (yytext.slice(0, 1) < '0' || yytext.slice(0, 1) > '9')
-						ptr++;
-
-				   /* Subtract one from the line number because
-				    * yylineno is zero-based instead of
-				    * one-based.
-				    */
-				   yylineno = parseInt(yytext.slice(0, 1), 10) - 1;
-				}
-{SPC}\#{SPC}"pragma"{SPCP}"debug"{SPC}\({SPC}"on"{SPC}\) {
-				  this.begin('PP');
-				  return 'PRAGMA_DEBUG_ON';
-				}
-{SPC}\#{SPC}"pragma"{SPCP}"debug"{SPC}\({SPC}"off"{SPC}\) {
-				  this.begin('PP');
-				  return 'PRAGMA_DEBUG_OFF';
-				}
-{SPC}\#{SPC}"pragma"{SPCP}"optimize"{SPC}\({SPC}"on"{SPC}\) {
-				  this.begin('PP');
-				  return 'PRAGMA_OPTIMIZE_ON';
-				}
-{SPC}\#{SPC}"pragma"{SPCP}"optimize"{SPC}\({SPC}"off"{SPC}\) {
-				  this.begin('PP');
-				  return 'PRAGMA_OPTIMIZE_OFF';
-				}
-{SPC}\#{SPC}"pragma"{SPCP}"STDGL"{SPCP}"invariant"{SPC}\({SPC}"all"{SPC}\) {
-				  this.begin('PP');
-				  return 'PRAGMA_INVARIANT_ALL';
-				}
-{SPC}\#{SPC}"pragma"{SPCP}	{ this.begin('PRAGMA'); }
-
-<PRAGMA>[\n]			{ this.begin('INITIAL'); yylineno++; yycolumn = 0; }
-<PRAGMA>.			{ }
-
-<PP>\/\/[^\n]*			{ }
-<PP>[ \t\r]*			{ }
-<PP>":"				return ":";
-<PP>[_a-zA-Z][_a-zA-Z0-9]*	{
-				   yylval.identifier = strdup(yytext);
-				   return 'IDENTIFIER';
-				}
-<PP>[1-9][0-9]*			{
-				    yylval.n = parseInt(yytext);
-				    return 'INTCONSTANT';
-				}
-<PP>[\n]				{ this.begin('INITIAL'); yylineno++; yycolumn = 0; return 'EOL'; }
-
-[\n]		{ /*yylineno++; yycolumn = 0;*/ }
-
-"attribute"	return 'ATTRIBUTE';
-"const"		return 'CONST';
-"bool"		return 'BOOL';
-"float"		return 'FLOAT';
-"int"		return 'INT';
-
-"break"		return 'BREAK';
-"continue"	return 'CONTINUE';
-"do"		return 'DO';
-"while"		return 'WHILE';
-"else"		return 'ELSE';
-"for"		return 'FOR';
-"if"		return 'IF';
-"discard"		return 'DISCARD';
-"return"		return 'RETURN';
-
-"bvec2"		return 'BVEC2';
-"bvec3"		return 'BVEC3';
-"bvec4"		return 'BVEC4';
-"ivec2"		return 'IVEC2';
-"ivec3"		return 'IVEC3';
-"ivec4"		return 'IVEC4';
-"vec2"		return 'VEC2';
-"vec3"		return 'VEC3';
-"vec4"		return 'VEC4';
-"mat2"		return 'MAT2X2';
-"mat3"		return 'MAT3X3';
-"mat4"		return 'MAT4X4';
-
-"in"              return 'IN';
-"out"             return 'OUT';
-"inout"           return 'INOUT';
-"uniform"	      return 'UNIFORM';
-"varying"         return 'VARYING';
-"invariant"       return 'INVARIANT';
-"flat"            return 'FLAT';
-"smooth"          return 'SMOOTH';
-
-"sampler1D"	return 'SAMPLER1D';
-"sampler2D"	return 'SAMPLER2D';
-"sampler3D"	return 'SAMPLER3D';
-"samplerCube"	return 'SAMPLERCUBE';
-"sampler1DShadow"	return 'SAMPLER1DSHADOW';
-"sampler2DShadow"	return 'SAMPLER2DSHADOW';
-
-
-"struct"		return 'STRUCT';
-"void"		return 'VOID';
-
-"layout"		{/*copy manually*/}
-
-"++"		return '++';
-"--"		return '--';
-"<="		return '<=';
-">="		return '>=';
-"=="		return '==';
-"!="		return '!=';
-"&&"		return '&&';
-"||"		return '||';
-"^^"		return '^^';
-"<<"		return '<<';
-">>"		return '>>';
-
-"*="		return '*=';
-"/="		return '/=';
-"+="		return '+=';
-"%="		return '%=';
-"<<="		return '<<=';
-">>="		return '>>=';
-"&="		return '&=';
-"^="		return '^=';
-"|="		return '|=';
-"-="		return '-=';
-
-[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fF]?	{
-			    this.yylval = parseFloat(yytext);
-			    return 'FLOATCONSTANT';
-			}
-\.[0-9]+([eE][+-]?[0-9]+)?[fF]?		{
-				this.yylval = parseFloat(yytext);
-				return 'FLOATCONSTANT';
-			}
-[0-9]+\.([eE][+-]?[0-9]+)?[fF]?		{
-			    this.yylval = parseFloat(yytext);
-			    return 'FLOATCONSTANT';
-			}
-[0-9]+[eE][+-]?[0-9]+[fF]?		{
-			    this.yylval = parseFloat(yytext);
-			    return 'FLOATCONSTANT';
-			}
-[0-9]+[fF]		{
-			    this.yylval = parseFloat(yytext);
-			    return 'FLOATCONSTANT';
-			}
-"0"[xX][0-9a-fA-F]+	{
-			    this.yylval = parseInt(yytext + 2, 16);
-			    return 'INTCONSTANT';
-			}
-"0"[0-7]*		{
-			    this.yylval = parseInt(yytext, 8);
-			    return 'INTCONSTANT';
-			}
-[1-9][0-9]*	{
-				this.yylval = parseInt(yytext);
-				return 'INTCONSTANT';
-			}
-"true"			{
-			    this.yylval = 1;
-			    return 'BOOLCONSTANT';
-			}
-"false"			{
-			    this.yylval = 0;
-			    return 'BOOLCONSTANT';
-			}
-
-
-"asm"		return 'ASM'
-"class"		return 'CLASS'
-"union"		return 'UNION'
-"enum"		return 'ENUM'
-"typedef"		return 'TYPEDEF'
-"template"	return 'TEMPLATE'
-"this"		return 'THIS'
-"packed"		return 'PACKED'
-"goto"		return 'GOTO'
-"switch"		return 'SWITCH'
-"default"		return 'DEFAULT'
-"inline"		return 'INLINE'
-"noinline"	return 'NOINLINE'
-"volatile"	return 'VOLATILE'
-"public"		return 'PUBLIC'
-"static"		return 'STATIC'
-"extern"		return 'EXTERN'
-"external"	return 'EXTERNAL'
-"interface"	return 'INTERFACE'
-"long"		return 'LONG'
-"short"		return 'SHORT'
-"double"		return 'DOUBLE'
-"half"		return 'HALF'
-"fixed"		return 'FIXED'
-"unsigned"	return 'UNSIGNED'
-"input"		return 'INPUT'
-"output"		return 'OUTPUT'
-"hvec2"		return 'HVEC2'
-"hvec3"		return 'HVEC3'
-"hvec4"		return 'HVEC4'
-"dvec2"		return 'DVEC2'
-"dvec3"		return 'DVEC3'
-"dvec4"		return 'DVEC4'
-"fvec2"		return 'FVEC2'
-"fvec3"		return 'FVEC3'
-"fvec4"		return 'FVEC4'
-
-"sampler2DRect"         return 'SAMPLER2DRECT';
-"sampler3DRect"         return 'SAMPLER3DRECT';
-"sampler2DRectShadow"   return 'SAMPLER2DRECTSHADOW';
-"sizeof"                return 'SIZEOF';
-"cast"                  return 'CAST';
-"namespace"             return 'NAMESPACE';
-"using"                 return 'USING';
-
-"lowp"                  return 'LOWP';
-"mediump"               return 'MEDIUMP';
-"highp"                 return 'HIGHP';
-"precision"             return 'PRECISION';
-
-[_a-zA-Z][_a-zA-Z0-9]* {
-	yy.yylval = yytext;
-	return yy.state.classify_identifier(yy.state, yytext);
-}
-
-.         return yytext;
-
-<<EOF>>   return 'EOF';
-
-
-/lex
-
 /* operator associations and precedence */
 
 %left '+'
@@ -350,12 +74,12 @@ extension_statement:
 external_declaration_list:
 	  external_declaration {
 			if ($1 !== null) {
-				yy.state.translation_unit.push($1);
+				yy.state.addAstNode($1);
 			}
 		}
 	| external_declaration_list external_declaration {
 			if ($2 !== null) {
-				yy.state.translation_unit.push($2);
+				yy.state.addAstNode($2);
 			}
 		}
 	;
@@ -375,15 +99,18 @@ primary_expression:
 		| 'INTCONSTANT' {
 				$$ = new AstExpression('int');
 				$$.setLocation(@1);
-				$$.primary_expression.int_constant = $1; }
+				$$.primary_expression.int_constant = $1;
+				$$.primary_expression.type = 'int'; }
 		| 'FLOATCONSTANT' {
 				$$ = new AstExpression('float');
 				$$.setLocation(@1);
-				$$.primary_expression.float_constant = $1; }
+				$$.primary_expression.float_constant = $1;
+				$$.primary_expression.type = 'float'; }
 		| 'BOOLCONSTANT' {
 				$$ = new AstExpression('bool');
 				$$.setLocation(@1);
-				$$.primary_expression.bool_constant = $1; }
+				$$.primary_expression.bool_constant = $1;
+				$$.primary_expression.type = 'bool'; }
 		| '(' expression ')' {
 				$$ = $2;
 				$$.grouped = true;
@@ -393,14 +120,21 @@ primary_expression:
 /* Line: 373 */
 postfix_expression:
 		  primary_expression
-		| postfix_expression '[' integer_expression ']'
+		| postfix_expression '[' integer_expression ']' {
+				$$ = new AstExpression('[]', $1, $3);
+				$$.setLocation(@1); }
+		}
 		| function_call
 		| postfix_expression '.' any_identifier {
 				$$ = new AstExpression('.', $1);
-				$$.setLocation(@1);				
+				$$.setLocation(@1);
 				$$.primary_expression.identifier = $3; }
-		| postfix_expression '++'
-		| postfix_expression '--'
+		| postfix_expression '++' {
+				$$ = new AstExpression('x++', $1);
+				$$.setLocation(@1); }
+		| postfix_expression '--' {
+				$$ = new AstExpression('x--', $1);
+				$$.setLocation(@1); }
 		;
 
 /* Line: 406 */
@@ -490,7 +224,7 @@ method_call_header:
 	;
 
 /* Grammar Note: Constructors look like functions, but lexical analysis recognized most of them as
-   keywords. They are now recognized through â€œtype_specifierâ€?.
+   keywords. They are now recognized through "type_specifier".
 */
 
 	/* Grammar Note: No traditional style type casts. */
@@ -498,11 +232,11 @@ method_call_header:
 unary_expression:
 		  postfix_expression
 		| '++' unary_expression {
-				$$ = new AstExpression($1, $2);
+				$$ = new AstExpression('++x', $2);
 				$$.setLocation(@1);
 			}
 		| '--' unary_expression {
-				$$ = new AstExpression($1, $2);
+				$$ = new AstExpression('--x', $2);
 				$$.setLocation(@1);
 			}
 		| unary_operator unary_expression {
@@ -514,8 +248,10 @@ unary_expression:
 	/* Grammar Note: No '*' or '&' unary ops. Pointers are not supported. */
 /* Line: 570 */
 unary_operator:
-		  '+'
-		| '-'
+		  '+' {
+				$$ = 'POS'; }
+		| '-' {
+				$$ = 'NEG'; }
 		| '!'
 		| '~'
 		;
@@ -723,7 +459,7 @@ declaration:
 
 /* Line: 782 */
 function_prototype:
-			function_declarator ')'
+		  function_declarator ')'
 		;
 
 /* Line: 786 */
@@ -751,7 +487,19 @@ function_header:
 				$$.setLocation(@1);
 				$$.return_type = $1;
 				$$.identifier = $2;
-				yy.state.symbols.add_function($2, $1.specifier.type_name);
+				
+				//Check for duplicates
+				if ($2 == 'main') {
+					if (yy.state.symbols.get_function($2)) {
+						var e = new Error("Cannot define main() more than once");
+						e.lineNumber = @1.first_line;
+						e.columnNumber = @1.first_column;
+						throw e;
+					}
+				}
+
+				$$.entry = yy.state.symbols.add_function($2, $1.specifier.type_name);
+				$$.entry.Ast = $$;
 				yy.state.symbols.push_scope();
 			}
 		;
@@ -764,7 +512,7 @@ parameter_declarator:
 				$$.type = new AstFullySpecifiedType();
 				$$.type.setLocation(@1);
 				$$.type.specifier = $1;
-				$$.type.identifier = $2; }
+				$$.identifier = $2; }
 		| type_specifier any_identifier '[' constant_expression ']'
 		;
 
@@ -812,12 +560,27 @@ parameter_type_specifier:
 /* Line: 905 */
 init_declarator_list:
 		  single_declaration
-		| init_declarator_list ',' any_identifier
+		| init_declarator_list ',' any_identifier {
+			var decl = new AstDeclaration($3, false);
+			decl.setLocation(@1);
+			$$ = $1;
+			$$.declarations.push(decl);
+			/*yy.state.symbols.add_variable($3);*/ }
 		| init_declarator_list ',' any_identifier '[' ']'
-		| init_declarator_list ',' any_identifier '[' constant_expression ']'
+		| init_declarator_list ',' any_identifier '[' constant_expression ']' {
+			var decl = new AstDeclaration($3, true, $5);
+			decl.setLocation(@1);
+			$$ = $1;
+			$$.declarations.push(decl);
+			/*yy.state.symbols.add_variable($3);*/ }
 		| init_declarator_list ',' any_identifier '[' ']' '=' initializer
 		| init_declarator_list ',' any_identifier '[' constant_expression ']' '=' initializer
-		| init_declarator_list ',' any_identifier '=' initializer
+		| init_declarator_list ',' any_identifier '=' initializer {
+			var decl = new AstDeclaration($3, false, null, $5);
+			decl.setLocation(@1);
+			$$ = $1;
+			$$.declarations.push(decl);
+			/*yy.state.symbols.add_variable($3);*/ }
 		;
 
 /* Grammar Note: No 'enum', or 'typedef'. */
@@ -833,31 +596,37 @@ single_declaration:
 				$$.setLocation(@1); }
 		| fully_specified_type any_identifier {
 				var decl = new AstDeclaration($2, false);
+				decl.setLocation(@2);
 				$$ = new AstDeclaratorList($1);
 				$$.setLocation(@1);
 				$$.declarations.push(decl); }
 		| fully_specified_type any_identifier '[' ']' {
 				var decl = new AstDeclaration($2, true);
+				decl.setLocation(@2);
 				$$ = new AstDeclaratorList($1);
 				$$.setLocation(@1);
 				$$.declarations.push(decl); }
 		| fully_specified_type any_identifier '[' constant_expression ']' {
 				var decl = new AstDeclaration($2, true, $4);
+				decl.setLocation(@2);
 				$$ = new AstDeclaratorList($1);
 				$$.setLocation(@1);
 				$$.declarations.push(decl); }
 		| fully_specified_type any_identifier '[' ']' '=' initializer {
 				var decl = new AstDeclaration($2, true, null, $6);
+				decl.setLocation(@2);
 				$$ = new AstDeclaratorList($1);
 				$$.setLocation(@1);
 				$$.declarations.push(decl); }
 		| fully_specified_type any_identifier '[' constant_expression ']' '=' initializer {
 				var decl = new AstDeclaration($2, true, $4, $7);
+				decl.setLocation(@2);
 				$$ = new AstDeclaratorList($1);
 				$$.setLocation(@1);
 				$$.declarations.push(decl); }
 		| fully_specified_type any_identifier '=' initializer {
 				var decl = new AstDeclaration($2, false, null, $4);
+				decl.setLocation(@2);
 				$$ = new AstDeclaratorList($1);
 				$$.setLocation(@1);
 				$$.declarations.push(decl); }
@@ -1007,11 +776,11 @@ basic_type_specifier_nonarray:
 /* Line: 1374 */
 precision_qualifier:
 		  'HIGHP' {
-				$$ = ast_precision.high; }
+				$$ = ast_precision.highp; }
 		| 'MEDIUMP' {
-				$$ = ast_precision.medium; }
+				$$ = ast_precision.mediump; }
 		| 'LOWP' {
-				$$ = ast_precision.low; }
+				$$ = ast_precision.lowp; }
 		;
 
 /* Line: 1407 */
@@ -1027,11 +796,12 @@ struct_specifier:
 /* Line: 1423 */
 struct_declaration_list:
 		  struct_declaration {
-				$$ = [$1];
+				$$ = new AstDeclaratorList();
+				$$.declarations = [$1];
 			}
 		| struct_declaration_list struct_declaration {
 				$$ = $1;
-				$$.push($2);
+				$$.declarations.push( $2 );
 			}
 		;
 
@@ -1041,10 +811,9 @@ struct_declaration:
 				var type = new AstFullySpecifiedType();
 				type.setLocation(@1);
 				type.specifier = $1;
-				
 				$$ = new AstDeclaratorList(type);
 				$$.setLocation(@1);
-				$$.declarations = $2; }
+				$$.declarations = [$2]; }
 		;
 
 /* Line: 1451 */
@@ -1114,7 +883,9 @@ statement_no_new_scope:
 
 /* Line: 1530 */
 compound_statement_no_new_scope:
-		  '{' '}'
+		  '{' '}' {
+				$$ = new AstCompoundStatement(false);
+				$$.setLocation(@1); }
 		| '{' statement_list '}' {
 				$$ = new AstCompoundStatement(false, $2);
 				$$.setLocation(@1); }
@@ -1140,7 +911,9 @@ statement_list:
 
 /* Line: 1567 */
 expression_statement:
-		  ';'
+		  ';' {
+			  	$$ = new AstExpressionStatement(null);
+				$$.setLocation(@1); }
 		| expression ';' {
 				$$ = new AstExpressionStatement($1);
 				$$.setLocation(@1); }
@@ -1160,13 +933,17 @@ selection_rest_statement:
 				$$.then_statement = $1;
 				$$.else_statement = $3; }
 		| statement %prec THEN  {
-				$$.then_statement = $2; }
+				$$.then_statement = $1; }
 		;
 
 /* Line: 1604 */
 condition:
 			expression
-		|	fully_specified_type any_identifier '=' initializer
+		|	fully_specified_type any_identifier '=' initializer {
+				var decl = new AstDeclaration($2, false, null, $4);
+				$$ = new AstDeclaratorList($1, true);
+				$$.setLocation(@1);
+				$$.declarations.push(decl); }
 		;
 
 /* Line: 1622 */
@@ -1184,13 +961,20 @@ case_label:
 iteration_statement:
 			'WHILE' '(' condition ')' statement_no_new_scope
 		|	'DO' statement 'WHILE' '(' expression ')' ';'
-		|	'FOR' '(' for_init_statement for_rest_statement ')' statement_no_new_scope
+		|	'FOR' '(' for_init_statement for_rest_statement ')' statement_no_new_scope {
+				$$ = new AstIterationStatement('for', $3, $4.cond, $4.rest, $6);
+				$$.setLocation(@1);
+			}
 		;
 
 /* Line: 1655 */
 for_init_statement:
-			expression_statement
-		|	declaration_statement
+			expression_statement {
+				$$ = $1;
+				$$.inline = true; }
+		|	declaration_statement {
+				$$ = $1;
+				$$.inline = true; }
 		;
 
 /* Line: 1660 */
@@ -1201,21 +985,35 @@ conditionopt:
 
 /* Line: 1668 */
 for_rest_statement:
-			conditionopt ';'
-		|	conditionopt ';' expression
+			conditionopt ';' {
+				$$ = {
+					cond : $1,
+					rest : null
+				}; }
+		|	conditionopt ';' expression {
+				$$ = {
+					cond : $1,
+					rest : $3
+				}; }
 		;
 
 /* Line: 1682 */
 jump_statement:
-		  'CONTINUE' ';'
-		| 'BREAK' ';'
+		'CONTINUE' ';' {
+			$$ = new AstJumpStatement('continue');
+			$$.setLocation(@1); }
+		| 'BREAK' ';' {
+			$$ = new AstJumpStatement('break');
+			$$.setLocation(@1); }
 		| 'RETURN' ';' {
-			$$ = new AstJumpStatement(ast_jump_modes._return);
+			$$ = new AstJumpStatement('return');
 			$$.setLocation(@1); }
 		| 'RETURN' expression ';' {
-			$$ = new AstJumpStatement(ast_jump_modes._return, $2);
+			$$ = new AstJumpStatement('return', $2);
 			$$.setLocation(@1); }			
-		| 'DISCARD' ';' /* Fragment shader only.*/
+		| 'DISCARD' ';' { /* Fragment shader only.*/
+			$$ = new AstJumpStatement('discard');
+			$$.setLocation(@1); }
 		;
 
 /* Line: 1715 */

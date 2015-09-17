@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011 Cimaron Shanahan
+Copyright (c) 2014 Cimaron Shanahan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -16,51 +16,9 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
 FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+CONNECTION WITH THE SOFTWARE OR THE USE		 OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
-/**
- * GlslProgramJavascriptVars Class
- */
-function GlslProgramJavascriptVars() {
-	this.uniform = {};
-	this.attribute = {};
-	this.varying = {};
-}
-
-var proto = GlslProgramJavascriptVars.prototype;
-
-
-/**
- * Add uniform variable
- */
-proto.addUniform = function(name, pos, size) {
-	this.uniform[name] = new GlslProgramJavascriptVar(name, pos, size);
+glsl.extensions.GL_OES_standard_derivatives = {
 };
-
-/**
- * Add attribute variable
- */
-proto.addAttribute = function(name, pos, size) {
-	this.attribute[name] = new GlslProgramJavascriptVar(name, pos, size);
-};
-
-/**
- * Add varying variable
- */
-proto.addVarying = function(name, pos, size) {
-	this.varying[name] = new GlslProgramJavascriptVar(name, pos, size);
-};
-
-
-
-/**
- * GlslProgramJavascriptVar Class
- */
-function GlslProgramJavascriptVar(name, pos, size) {
-	this.name = name;
-	this.pos = pos;
-	this.size = size;
-}
 

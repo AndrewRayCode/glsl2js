@@ -19,88 +19,78 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-function glsl_state(options) {
-	var i;
+/**
+ * GLSL Parser Class
+ */
+function GlslParser() {
 	
-	this.options = {
-		target : 0,
-		language_version : 100,
-	};
-	
-	for (i in options) {
-		this.options[i] = options[i];	
-	}
-
-	this.symbols = new SymbolTable();
-	this.translation_unit = [];
-
-	this.info_log = [];
-	this.error = false;
+	//Jison Global
+	this.jison = parser;
+	this.jison.lexer = lexer;
 }
 
-proto = glsl_state.prototype = {};
+var proto = GlslParser.prototype;
 
 /**
- * Get identifier type
- *
- * @param   object   state   GLSL state
- * @param   string   name    Identifier name
- * Add error to state
- *
- * @return  string
- * @param   string   msg      Message
- * @param   int      line     Message
- * @param   int      column   Message
+ * Parse Program
  */
-proto.classify_identifier = function(name) {
-	if (this.symbols.get_variable(name) || this.symbols.get_function(name)) {
-		return 'IDENTIFIER';
-	} else if (this.symbols.get_type(name)) {
-		return 'TYPE_IDENTIFIER';
-	} else {
-		return 'NEW_IDENTIFIER';
-	}
-};
+proto.parse = function(state) {
+	var result;
 
-
-/**
- * Add error to state
- *
- * @param   string   msg      Message
- * @param   int      line     Message
- * @param   int      column   Message
- */
-proto.addError = function(msg, line, column) {
-	var err;
-
-	err = util.format("%s at line %s, column %s", msg, line, column);
-
-	this.error = true;
-	this.info_log.push(err);
-};
-
-
-/**
- * Jison parser compatibility
- */
-glsl.parse = function(src, options) {
-	var result, state;
-
-	state = new glsl_state(options);
-
-	symbol_table_init(state);
-
-	parser.yy =  {
+	this.jison.yy =  {
 		test : 1,
 		state : state
 	};
 
 	try {
-		result = parser.parse(src);
+		this.jison.parse(state.getTranslationUnit());
 	} catch(e) {
 		state.addError(e.message, e.lineNumber, e.columnNumber);
+		return false;
+	}
+
+	return true;
+};
+
+glsl.parser = new GlslParser();
+
+
+
+/**
+ * External Parse
+ *
+ * @param   string   src        Source code
+ * @param   object   options    Compilation options
+ *
+ * @return  object
+ */
+glsl.parse = function(src, options) {
+	var state,
+		result,
+		irs
+		;
+
+	state = new GlslState(options);
+	state.setSource(src);
+	this.fire('init', [state]);
+
+	//Preprocess
+	result = this.preprocessor.process(state, options);
+	this.fire('preprocess', [state]);
+
+	//Parse into AST
+	if (result) {
+		result = this.parser.parse(state);
+		this.fire('parse', [state]);
+	}
+
+	if (result) {
+		state.status = true;	
+		this.fire('complete', [state]);
+	} else {
+		this.fire('fail', [state]);
 	}
 
 	return state;
 };
-	
+

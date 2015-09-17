@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011 Cimaron Shanahan
+Copyright (c) 2015 Cimaron Shanahan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -19,24 +19,26 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE		 OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-function ARBProgram() {
-	this.profile = "!!ARBvp1.0";
-	this.semantic = [];
-	this.vars = [];
+glsl.extensions.debug = {
 
-	this.body = [];
-}
+	symbol_table_init : function(state, symbols, target) {
+		var entry, i, types;
 
-var proto = ARBProgram.prototype;
+		entry = symbols.add_function('debugger', 'void', ['void']);
+		entry.code = [
+			"EVAL \"debugger\""
+		];
 
+		types = ['float', 'int', 'bool'];
 
-proto.addSemantic = function(s) {
-	this.semantic.push(s);
+		for (i = 0; i < types.length; i++) {
+
+			entry = symbols.add_function('print', 'void', [types[i]]);		
+			entry.code = [
+				"EVAL \"console.log(%1.x)\" %1.x" 
+			];
+		}
+	}
+	
 };
-
-proto.addVar = function(name, type) {
-	this.vars.push({n:name, t:type});
-};
-
-
 

@@ -19,37 +19,38 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-var _ins = require('./instruction.js');
-var _parse = require('./parse.js');
-var _javascript = require('./parse.js');
 
-var ARB = {
+/**
+ * GlslProgramJSContext class
+ */
+function GlslProgramJSContext(options) {
+	var uniform, attribute, varying, result, temp, jstemp, total, start;
 
-	Instruction : _ins.Instruction,
-	Operand : _ins.Operand,
-	language : 
+	uniform = Math.max(options.max_vertex_uniform_vectors, options.max_fragment_uniform_vectors);
+	attribute = options.max_vertex_attribute_vectors;
+	varying = options.max_varying_vectors;
+	result = 2;	
+	temp = options.max_register_vectors;
+	jstemp = 1;
 
-	language : {
-		javascript : _javascript
-	},
+	total = uniform + attribute + varying + result + temp + jstemp;
 
-	output : "",
-	errors : [],
+	//Each vector is 16 bytes (4 comp * 4 bytes)
+	this.heap = new ArrayBuffer(total * 16);
 
-	translate : function(object_code, lang) {
-		var irs, symbols, engine;
+	start = 0;
+	this.uniform_f32 = new Float32Array(this.heap, start, uniform * 4);
 
-		//this.parse(object_code);
+	start += (uniform * 16);
+	this.attribute_f32 = new Float32Array(this.heap, start, attribute * 4);
 
-		if (this.errors.count > 0) {
-			return false;	
-		}
+	start += (attribute * 16);
+	this.varying_f32 = new Float32Array(this.heap, start, varying * 4);
 
-		engine = this.language[lang];
-		engine.translate(object_code);
+	start += (varying * 16);
+	this.result_f32 = new Float32Array(this.heap, start, result * 4);
+}
 
-		return (this.errors.length == 0);			
-	}
-};
+var proto = GlslProgramJSContext.prototype;
 
 

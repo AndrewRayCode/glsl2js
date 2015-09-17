@@ -51,12 +51,14 @@ function Ir(target) {
 	this.last = null;
 }
 
-Ir.prototype.getTemp = function() {
-	
-	var t = 'temp@' + this.symbols.temp.next;
+Ir.prototype.getTemp = function(n) {
+	var t;
 
-	this.symbols.temp.next++;
-	
+	n = n || 1;
+	t = 'temp@' + this.symbols.temp.next;
+
+	this.symbols.temp.next += n;
+
 	return t;
 };
 
@@ -74,7 +76,7 @@ Ir.prototype.getUniform = function(entry) {
 	if (!table.entries[entry.name]) {
 		table.entries[entry.name] = entry;
 		entry.out = 'uniform@' + table.next;
-		table.next += types[entry.type].slots;
+		table.next += entry.getType().slots;
 	}
 
 	return entry.out;
@@ -94,7 +96,7 @@ Ir.prototype.getAttribute = function(entry) {
 	if (!table.entries[entry.name]) {
 		table.entries[entry.name] = entry;
 		entry.out = 'attribute@' + table.next;
-		table.next += types[entry.type].slots;
+		table.next += entry.getType().slots;
 	}
 
 	return entry.out;
@@ -114,7 +116,7 @@ Ir.prototype.getVarying = function(entry) {
 	if (!table.entries[entry.name]) {
 		table.entries[entry.name] = entry;
 		entry.out = 'varying@' + table.next;
-		table.next += types[entry.type].slots;
+		table.next += entry.getType().slots;
 	}
 
 	return entry.out;
@@ -160,6 +162,17 @@ Ir.normalizeSwizzle = function(swz) {
 	   ;
 
 	return n;
+};
+
+/**
+ * Validate a set of components against a list of valid components
+ */
+Ir.matchComponents = function(src, list) {
+	var regex;
+	
+	regex = new RegExp("^[" + list + "]*$");
+	
+	return regex.test(src);
 };
 
 Ir.swizzles = ["xyzw", "rgba", "stpq"];
@@ -216,7 +229,7 @@ Ir.prototype.toString = function() {
  * @param   array       List of operands
  */
 Ir.prototype.build = function(code, oprds) {
-	var dest, i, j, o, n, oprd, ir, new_swz;
+	var dest, i, j, k, o, n, t, oprd, ir, new_swz, temps;
 
 	//Parse operands
 	for (i = 0; i < oprds.length; i++) {
@@ -226,7 +239,7 @@ Ir.prototype.build = function(code, oprds) {
 		if (oprd.swizzle) {
 
 			//need a new temp to move the swizzle so our code pattern works
-			new_swz = swizzles[0].substring(0, oprd.swizzle.length);
+			new_swz = Ir.swizzles[0].substring(0, oprd.swizzle.length);
 
 			if (oprd.swizzle != new_swz) {
 				dest = this.getTemp();
@@ -239,6 +252,8 @@ Ir.prototype.build = function(code, oprds) {
 		oprds[i] = oprd;
 	}
 
+	temps = [];
+
 	//Merge template with passed operands
 	for (i = 0; i < code.length; i++) {
 
@@ -246,14 +261,40 @@ Ir.prototype.build = function(code, oprds) {
 
 		//For each operand
 		for (j = 0; j < IrInstruction.operands.length; j++) {		
+			
 			o = IrInstruction.operands[j];
 			oprd = ir[o];
-			if (oprd && (n = oprd.name.match(/%(\d)/))) {
+			
+			if (!oprd) {
+				break;
+			}
+
+			//Normal src/dest
+			n = oprd.name.match(/%(\d+)/);
+			if (n) {
 				n = parseInt(n[1]);
 				ir[o] = new IrOperand(oprds[n - 1].toString());
 				ir[o].addOffset(oprd.address);
 				ir[o].swizzle = oprd.swizzle;
+				ir[o].neg = oprd.neg;
 			}
+			
+			//Need temp
+			t = oprd.name.match(/%t(\d+)/);
+			if (t) {
+
+				//Build up enough temps
+				t = parseInt(t[1]);
+				while (temps.length < t) {
+					temps.push(this.getTemp());	
+				}
+				t = temps[t - 1].split('@');
+				
+				oprd.name = t[0];
+				oprd.address = t[1];
+				oprd.full = oprd.toString();
+			}
+			
 		}
 
 		this.push(ir);

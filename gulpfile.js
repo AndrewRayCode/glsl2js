@@ -24,6 +24,7 @@ var del = require('del'),
 	concat = require('gulp-concat'),
 	include = require('gulp-include'),
 	jison = require('gulp-jison'),
+	jisonlex = require('gulp-jison-lex'),
 	jshint = require('gulp-jshint'),
 	rename = require('gulp-rename'),
 	uglify = require('gulp-uglify')
@@ -33,6 +34,18 @@ gulp.task('clean', function(cb) {
     del(['build/*'], cb);
 });
 
+/**
+ * Component Tasks
+ */
+gulp.task('jison-lex', function() {
+	return gulp.src('parser/*.jisonlex')
+		.pipe(jisonlex({
+			outFile : 'lexer.js'
+		}))
+		//.pipe(rename('lexer.js'))
+		.pipe(gulp.dest('build'))
+});
+
 gulp.task('jison', function() {
 	return gulp.src('parser/*.jison')
 		.pipe(jison({ moduleType: 'commonjs' }))
@@ -40,17 +53,19 @@ gulp.task('jison', function() {
 		.pipe(gulp.dest('build'))
 });
 
-gulp.task('parser', ['jison'], function() {
+gulp.task('_parser', ['jison', 'jison-lex'], function() {
 	return gulp.src([
 		'preprocessor/preprocessor.js',
 		'preprocessor/comments.js',
+		'preprocessor/directives.js',
 		'parser/type.js',
 		'parser/symbol.js',
 		'parser/ast.js',
 		'ir/builtin.js',
 		'build/grammar.js',
+		'build/lexer.js',
 		'parser/parser.js',
-		'parser/lexer.js'
+		'extensions/**/*.js'
 		])
 		.pipe(concat('parser.js'))
 		.pipe(gulp.dest('build'))
@@ -60,20 +75,23 @@ gulp.task('generator', function() {
 	return gulp.src([
 		'ir/generator.js',	
 		'ir/ir.js',
-		'ir/operand.js',
 		'ir/instruction.js',
-		'output/javascript/program.js',
-		'output/javascript/context.js',
-		'output/javascript/variables.js'
+		'output/program.js',
+		'output/**/*.js'
 		])
 		.pipe(concat('ir.js'))
 		.pipe(gulp.dest('build'))
 });
 
-gulp.task('glsl', ['parser', 'generator'], function() {
+/**
+ * Build
+ */
+gulp.task('glsl-all', ['_parser', 'generator'], function() {
 	return gulp.src([
 		'glsl.js',
 		'library/util.js',
+		'event.js',
+		'state.js',
 		'build/parser.js',
 		'build/ir.js'
 		])
@@ -81,7 +99,20 @@ gulp.task('glsl', ['parser', 'generator'], function() {
 		.pipe(gulp.dest('build'))
 });
 
-gulp.task('errors', ['glsl'], function() {
+
+gulp.task('glsl-parser', ['_parser'], function() {
+	return gulp.src([
+		'glsl.js',
+		'library/util.js',
+		'event.js',
+		'state.js',
+		'build/parser.js'
+		])
+		.pipe(concat('glsl.part.js'))
+		.pipe(gulp.dest('build'))
+});
+
+gulp.task('errors', ['glsl-all'], function() {
 	return gulp.src([
 		'build/glsl.js'
 	])
@@ -89,19 +120,10 @@ gulp.task('errors', ['glsl'], function() {
 	;
 });
 
-gulp.task('watch', function() {
-    gulp.watch([
-        '*.js',
-        'library/*.js',
-        'ir/*.js',
-        'output/**/*.js',
-        'parser/*.js',
-        'parser/*.jison',
-        'preprocessor/*.js'
-    ], ['default']);
-});
-
-gulp.task('default', ['clean', 'glsl'], function() {
+/**
+ * Final processing
+ */
+gulp.task('default', ['clean', 'glsl-all'], function() {
 
 	return gulp.src([
 		'index.js'
@@ -117,8 +139,53 @@ gulp.task('default', ['clean', 'glsl'], function() {
 				return !comment.value.match(/Copyright/);
 			}
 		}))*/
+		/*.pipe(uglify({
+			mangle : true,
+			output : {
+				beautify : false
+			},
+			compress : true
+		}))*/
 		.pipe(rename('glsl.js'))
 		.pipe(gulp.dest('build'))
 		;
 });
+
+gulp.task('parser', ['clean', 'glsl-parser'], function() {
+	return gulp.src([
+		'index.js'
+		])
+		.pipe(include())
+		.pipe(rename('glsl.parser.js'))
+		.pipe(gulp.dest('build'))
+		;
+});
+
+/**
+ * Watch
+ */
+gulp.task('watch', function() {
+    gulp.watch([
+        '*.js',
+        'library/*.js',
+        'ir/*.js',
+        'output/**/*.js',
+        'parser/*.js',
+        'parser/*.jison',
+        'preprocessor/*.js',
+		'extensions/**/*.js'
+    ], ['default']);
+});
+
+gulp.task('watch-parser', function() {
+    gulp.watch([
+        '*.js',
+        'library/*.js',
+        'parser/*.js',
+        'parser/*.jison',
+        'preprocessor/*.js',
+		'extensions/**/*.js'
+    ], ['parser']);
+});
+
 

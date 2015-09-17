@@ -23,8 +23,62 @@ function Type(name, size, slots, base) {
 	this.name = name;
 	this.size = size;
 	this.slots = slots;
-	this.base = base;
+	this.components = (size / slots);
+	this.swizzle = (this.components != 4) ? "xyzw".slice(0, this.components) : "";
+	this.base = base || name;
 }
+
+/**
+ * Do a cast on a constant
+ *
+ * @param   string   val    Value to cast
+ * @param   string   from   From type
+ * @param   string   to     To type
+ *
+ * @return  string
+ */
+Type.castTo = function(val, from, to) {
+	var f32;
+
+	switch (to) {
+		
+		case 'int':
+			return "" + parseInt(val);
+
+		case 'float':
+			//Should we keep maximum precision, or use the following to force to 32bit precision??
+			/*
+			f32 = new Float32Array(1);
+			f32[0] = parseFloat(val);
+			return "" + f32[0];
+			*/
+			return "" + parseFloat(val);
+
+		case 'bool':
+			return parseFloat(val) ? "1" : "0";
+	}
+
+	return val;
+};
+
+/**
+ * Determine if can cast from one type to another
+ *
+ * @param   string   from   From type
+ * @param   string   to     To type
+ *
+ * @return  bool
+ */
+Type.canCast = function(from, to) {
+	var t1, t2;
+
+	t1 = types[from];
+	t2 = types[to];
+
+	return t1.size === 1 && t2.size === 1;
+};
+
+
 
 var types = {
 	_void : new Type("void", 1, 1),
@@ -44,7 +98,8 @@ var types = {
 	mat3 : new Type("mat3", 9, 3, 'float'),
 	mat4 : new Type("mat4", 16, 4, 'float'),
 	sampler2D : new Type("sampler2D", 1, 1),
-	samplerCube : new Type("samplerCube", 1, 1)
+	samplerCube : new Type("samplerCube", 1, 1),
+	struct : new Type("struct", 1, 1 )
 };
 
 //Compatibility

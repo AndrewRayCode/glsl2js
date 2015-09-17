@@ -21,20 +21,57 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 /**
- * GlslProgramJavascriptContext class
+ * GlslProgramJavascriptVars Class
  */
-function GlslProgramJavascriptContext() {
-
-	this.heap = new ArrayBuffer(512 * 4);
-
-	this.uniform_f32 = new Float32Array(this.heap, 0, 128);
-	this.attribute_f32 = new Float32Array(this.heap, 128, 128);
-	this.result_f32 = new Float32Array(this.heap, 256, 128);
-
-	//Alias
-	this.varying_f32 = this.attribute_f32;
+function GlslProgramVars() {
+	this.uniform = {};
+	this.attribute = {};
+	this.varying = {};
 }
 
-var proto = GlslProgramJavascriptContext.prototype;
+var proto = GlslProgramVars.prototype;
 
+
+/**
+ * Add uniform variable
+ */
+proto.addUniform = function(name, pos, slots, comp) {
+
+	this.uniform[name] = new GlslProgramVar(name, pos, slots, comp, 'uniform');
+	
+	return this.uniform[name];	
+};
+
+/**
+ * Add attribute variable
+ */
+proto.addAttribute = function(name, pos, slots, comp) {
+
+	this.attribute[name] = new GlslProgramVar(name, pos, slots, comp, 'attribute');
+
+	return this.attribute[name];	
+};
+
+/**
+ * Add varying variable
+ */
+proto.addVarying = function(name, pos, slots, comp) {
+
+	this.varying[name] = new GlslProgramVar(name, pos, slots, comp, 'varying');
+
+	return this.varying[name];
+};
+
+
+
+/**
+ * GlslProgramVar Class
+ */
+function GlslProgramVar(name, pos, slots, comp, type) {
+	this.name = name;
+	this.pos = pos;
+	this.slots = slots;
+	this.components = comp;
+	this.type = type;
+}
 
